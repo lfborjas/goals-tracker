@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module YNAB ( buildRequest
-            , budgetsRequest
---            , allBudgets
+module YNAB ( allAccounts
             ) where
 
 {-
@@ -28,8 +26,8 @@ accessToken = ""
 host :: BC.ByteString
 host = "api.youneedabudget.com"
 
-budgetsPath :: BC.ByteString
-budgetsPath = "/v1/budgets"
+accountsPath :: BC.ByteString
+accountsPath = "/v1/budgets/last-used/accounts"
 
 buildRequest :: BC.ByteString -> BC.ByteString -> BC.ByteString
              -> BC.ByteString -> Request
@@ -42,8 +40,8 @@ buildRequest token host method path =
   $ setRequestPort 443
   $ defaultRequest
 
-budgetsRequest :: Request
-budgetsRequest = buildRequest accessToken host "GET" budgetsPath
+accountsRequest :: Request
+accountsRequest = buildRequest accessToken host "GET" accountsPath
 
 {-
 Example response:
@@ -61,7 +59,7 @@ getResponseBody <$> response
 
 data YNABResponse = YNABResponse
   { responseData :: YNABData
-  } deriving (Show, Generic)
+  } deriving (Show, Generic) -- TODO: need a constructor for errors, too
 
 -- we wrote our own parseJSON to be able to map data -> responseData
 -- since `data` isn't an available name for our record (haskell keyword)
@@ -70,27 +68,25 @@ instance FromJSON YNABResponse where
     YNABResponse <$> v .: "data"
     -- ignore the rest of the metadata for now
 
-data YNABData = BudgetSet { budgets :: [Budget]}
+data YNABData = AccountSet { accounts :: [Account] }
   deriving (Show, Generic)
 
 instance FromJSON YNABData -- no need to write our own here
 
-data Budget = Budget
-  { budgetId       :: T.Text
-  , name           :: T.Text
-  , lastModifiedOn :: T.Text
-  , firstMonth     :: T.Text
-  , lastMonth      :: T.Text
+data Account = Account
+  { accountId   :: T.Text
+  , accountName :: T.Text
+  , accountType :: T.Text
+  , balance     :: Int
   } deriving (Show, Generic)
 
-instance FromJSON Budget where
+instance FromJSON Account where
   parseJSON (Object v) =
-    Budget
+    Account
     <$> v .: "id"
     <*> v .: "name"
-    <*> v .: "last_modified_on"
-    <*> v .: "first_month"
-    <*> v .: "last_month"
+    <*> v .: "type"
+    <*> v .: "balance" -- TODO: turn into a Double? (right now this is a "millis": a 1000th of a dollar
 
 {-
 
@@ -101,9 +97,9 @@ go deeper or go nowhere (hence the final type signature)
 
 -}
 
-allBudgets :: IO (Maybe YNABResponse)
-allBudgets = do
-  response <- httpLBS budgetsRequest
+allAccounts :: IO (Maybe YNABResponse)
+allAccounts = do
+  response <- httpLBS accountsRequest
   return $ decode $ getResponseBody response
 
 {-
