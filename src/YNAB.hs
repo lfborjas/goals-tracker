@@ -1,10 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module YNAB ( buildRequest
-            , budgetsRequest
---            , allBudgets
-            ) where
+module YNAB where
 
 {-
 Module to deal with the YNAB API:
@@ -14,39 +11,25 @@ https://api.youneedabudget.com/
 -}
 
 import Data.Aeson
+import Data.Aeson.Lens
 import Data.Text as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as LC
 import Network.HTTP.Simple
+import Network.Wreq
 import GHC.Generics
+import Control.Lens
 
 accessToken :: BC.ByteString
 accessToken = ""
 
-host :: BC.ByteString
-host = "api.youneedabudget.com"
-
-budgetsPath :: BC.ByteString
-budgetsPath = "/v1/budgets"
-
-buildRequest :: BC.ByteString -> BC.ByteString -> BC.ByteString
-             -> BC.ByteString -> Request
-buildRequest token host method path =
-  setRequestMethod method
-  $ setRequestHost host
-  $ setRequestHeader "Authorization" [mconcat ["Bearer ", token]]
-  $ setRequestPath path
-  $ setRequestSecure True
-  $ setRequestPort 443
-  $ defaultRequest
-
-budgetsRequest :: Request
-budgetsRequest = buildRequest accessToken host "GET" budgetsPath
+apiBase :: String
+apiBase = "https://api.youneedabudget.com/v1"
 
 {-
-Example response:
+Example response for budgets:
 
 Notice that we're using the monadic assignment (<-) since
 the response is actually in an IO context; we could have also used
@@ -70,7 +53,8 @@ instance FromJSON YNABResponse where
     YNABResponse <$> v .: "data"
     -- ignore the rest of the metadata for now
 
-data YNABData = BudgetSet { budgets :: [Budget]}
+data YNABData = BudgetSet  { budgets :: [Budget]}
+              | AccountSet { accounts :: [Account]}
   deriving (Show, Generic)
 
 instance FromJSON YNABData -- no need to write our own here
@@ -92,6 +76,23 @@ instance FromJSON Budget where
     <*> v .: "first_month"
     <*> v .: "last_month"
 
+
+data Account = Account
+  { accountId   :: T.Text
+  , name        :: T.Text
+  , accountType :: T.Text
+  , balance     :: Int
+  } deriving (Show, Generic)
+
+instance FromJson Account where
+  parseJSON (Object v) =
+    Account
+    <$> v .: "id"
+    <$> v .: "name"
+    <$> v .: "type"
+    <$> v .: "balance" -- TODO: turn into a Double? (right now this is a "millis": a 1000th of a dollar
+
+
 {-
 
 And here is where I got stuck: there's no escaping the IO monad!
@@ -101,19 +102,25 @@ go deeper or go nowhere (hence the final type signature)
 
 -}
 
-allBudgets :: IO (Maybe YNABResponse)
-allBudgets = do
-  response <- httpLBS budgetsRequest
-  return $ decode $ getResponseBody response
+fromApi :: String -> IO (Response LC.ByteString)
+fromApi resource = do
+  let opts = defaults & auth ?~ oauth2Bearer accessToken
+  r <- getWith opts $ mconcat [apiBase, resource]
+  return r
 
 {-
+we can do some funky lens magic with the above method if we e.g. called the /budgets endpoint:
 
-The above, in a ghci session, shows:
+λ> r ^? responseBody . key "data" . key "budgets" . _Array . traverse . key "id" . _String
+Just "50855054-efc4-4d49-8918-97bf198666"
 
-λ> allBudgets
-Just (YNABResponse {responseData = BudgetSet {budgets = [Budget {budgetId = "EGID", name = "EG", lastModifiedOn = "2019-04-02T02:21:41+00:00", firstMonth = "2019-03-01", lastMonth = "2019-04-01"}]}})
-λ> :t allBudgets
-allBudgets :: IO (Maybe YNABResponse)
-λ> 
+λ> r <- fromApi "/budgets/last-used/accounts"
+λ> r ^? responseBody . key "data" . key "accounts" . _Array
 
 -}
+ 
+
+trackingAccounts = do
+  r <- fromApi "/budgets/last-used/accounts"
+  
+  
