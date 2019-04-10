@@ -23,7 +23,7 @@ import GHC.Generics
 import Control.Lens
 
 accessToken :: BC.ByteString
-accessToken = ""
+
 
 apiBase :: String
 apiBase = "https://api.youneedabudget.com/v1"
@@ -79,18 +79,18 @@ instance FromJSON Budget where
 
 data Account = Account
   { accountId   :: T.Text
-  , name        :: T.Text
+  , accountName :: T.Text
   , accountType :: T.Text
   , balance     :: Int
   } deriving (Show, Generic)
 
-instance FromJson Account where
+instance FromJSON Account where
   parseJSON (Object v) =
     Account
     <$> v .: "id"
-    <$> v .: "name"
-    <$> v .: "type"
-    <$> v .: "balance" -- TODO: turn into a Double? (right now this is a "millis": a 1000th of a dollar
+    <*> v .: "name"
+    <*> v .: "type"
+    <*> v .: "balance" -- TODO: turn into a Double? (right now this is a "millis": a 1000th of a dollar
 
 
 {-
@@ -118,9 +118,36 @@ Just "50855054-efc4-4d49-8918-97bf198666"
 λ> r ^? responseBody . key "data" . key "accounts" . _Array
 
 -}
- 
 
-trackingAccounts = do
-  r <- fromApi "/budgets/last-used/accounts"
+
+-- this function feels like a bit of a defeat: why do I get to go so deeply in the lens and then have to re-get it as JSON?
+
+{-
+This works in the command line, but not as a motherfucking function:
+
+λ> r <- fromApi "/budgets/last-used/accounts"
+λ> y = decode <$> (encode <$> (r ^.. responseBody . key "data" . key "accounts" . _Array . traverse . _Object)) :: [Maybe Account]
+λ> :t y
+y :: [Maybe Account]
+
+How the _fuck_ can I actually work with Accounts?????? It seems i'm trapped in the IO monad because r <- is the first
+thing I do with a monad?
+
+-}
+
+dataPoints :: (Monad m, Functor f) => m (f Account) -> m (f Text, f Int)
+dataPoints accounts = do
+  account <- accounts
+  -- these values can be stuck in a Maybe, so use fmap on them:
+  let n = accountName <$> account
+  let b = balance <$> account
+  return (n, b)
   
+
+allAccounts :: IO ()
+allAccounts = do
+  r <- fromApi "/budgets/last-used/accounts"
+  let x = decode <$> (encode <$> (r ^.. responseBody . key "data" . key "accounts" . _Array . traverse . _Object)) :: [Maybe Account]
+  print $ dataPoints x
+
   
