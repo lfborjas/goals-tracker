@@ -20,7 +20,9 @@ import qualified Data.ByteString.Lazy.Char8 as LC
 import Network.HTTP.Simple
 import Network.Wreq
 import GHC.Generics
+import GHC.Base
 import Control.Lens
+import Control.Monad
 
 accessToken :: BC.ByteString
 
@@ -142,12 +144,39 @@ dataPoints accounts = do
   let n = accountName <$> account
   let b = balance <$> account
   return (n, b)
-  
 
-allAccounts :: IO ()
-allAccounts = do
+
+isAsset :: Maybe Account -> Bool
+isAsset Nothing = False
+isAsset (Just a) = (accountType a) == "otherAsset"
+
+
+-- notice that trackingAccounts doesn't work with a generic Functor; mostly because I couldn't for the life of me
+-- extricate a Boolean out of that mess.
+trackingAccounts :: (Monad m, Alternative m) => m (Maybe Account) -> m (Maybe Account)
+trackingAccounts accounts = do
+  account <- accounts
+  let isT = isAsset account
+  guard isT
+  return account
+
+-- function that takes another function to operate on all accounts
+-- notice that the other function is required to deal with the fact that
+-- the accounts may be Nothing
+allAccounts :: ([Maybe Account] -> b) -> IO b
+allAccounts g = do
   r <- fromApi "/budgets/last-used/accounts"
   let x = decode <$> (encode <$> (r ^.. responseBody . key "data" . key "accounts" . _Array . traverse . _Object)) :: [Maybe Account]
-  print $ dataPoints x
+  return $ g x -- put back in the IO monad
+
+{-
+Notice that now our relevant data points are trapped in an IO monad, but we can, e.g. print with:
+
+(allAccounts dataPoints) >>= print -- returns a list of name,balance pairs, in an IO monad
+(allAccounts trackingAccounts) >>= print -- returns a list of only the tracking accounts, in IO
+
+and potentially, plot??
+
+-}
 
   
