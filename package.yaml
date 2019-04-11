@@ -25,10 +25,9 @@ dependencies:
 - text
 - http-conduit
 - aeson
-
-extensions:
-- OverloadedStrings
-- DeriveGeneric
+- wreq
+- lens
+- lens-aeson
 
 library:
   source-dirs: src
@@ -41,6 +40,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -XOverloadedStrings
     dependencies:
     - goals-tracker
 
