@@ -24,9 +24,6 @@ import GHC.Base
 import Control.Lens
 import Control.Monad
 
-accessToken :: BC.ByteString
-
-
 apiBase :: String
 apiBase = "https://api.youneedabudget.com/v1"
 
@@ -43,41 +40,6 @@ getResponseBody <$> response
 "{\"data\":{\"budgets\":[{\"id\":\"EGID\",\"name\":\"EG\",\"last_modified_on\":\"2019-04-02T02:21:41+00:00\",\"first_month\":\"2019-03-01\",\"last_month\":\"2019-04-01\",\"date_format\":{\"format\":\"MM/DD/YYYY\"},\"currency_format\":{\"iso_code\":\"USD\",\"example_format\":\"123,456.78\",\"decimal_digits\":2,\"decimal_separator\":\".\",\"symbol_first\":true,\"group_separator\":\",\",\"currency_symbol\":\"$\",\"display_symbol\":true}}]}}"
 
 -}
-
-data YNABResponse = YNABResponse
-  { responseData :: YNABData
-  } deriving (Show, Generic)
-
--- we wrote our own parseJSON to be able to map data -> responseData
--- since `data` isn't an available name for our record (haskell keyword)
-instance FromJSON YNABResponse where
-  parseJSON (Object v) =
-    YNABResponse <$> v .: "data"
-    -- ignore the rest of the metadata for now
-
-data YNABData = BudgetSet  { budgets :: [Budget]}
-              | AccountSet { accounts :: [Account]}
-  deriving (Show, Generic)
-
-instance FromJSON YNABData -- no need to write our own here
-
-data Budget = Budget
-  { budgetId       :: T.Text
-  , name           :: T.Text
-  , lastModifiedOn :: T.Text
-  , firstMonth     :: T.Text
-  , lastMonth      :: T.Text
-  } deriving (Show, Generic)
-
-instance FromJSON Budget where
-  parseJSON (Object v) =
-    Budget
-    <$> v .: "id"
-    <*> v .: "name"
-    <*> v .: "last_modified_on"
-    <*> v .: "first_month"
-    <*> v .: "last_month"
-
 
 data Account = Account
   { accountId   :: T.Text
@@ -104,8 +66,8 @@ go deeper or go nowhere (hence the final type signature)
 
 -}
 
-fromApi :: String -> IO (Response LC.ByteString)
-fromApi resource = do
+fromApi :: BC.ByteString -> String -> IO (Response LC.ByteString)
+fromApi accessToken resource = do
   let opts = defaults & auth ?~ oauth2Bearer accessToken
   r <- getWith opts $ mconcat [apiBase, resource]
   return r
@@ -163,9 +125,9 @@ trackingAccounts accounts = do
 -- function that takes another function to operate on all accounts
 -- notice that the other function is required to deal with the fact that
 -- the accounts may be Nothing
-allAccounts :: ([Maybe Account] -> b) -> IO b
-allAccounts g = do
-  r <- fromApi "/budgets/last-used/accounts"
+allAccounts :: BC.ByteString -> ([Maybe Account] -> b) -> IO b
+allAccounts token g = do
+  r <- fromApi token "/budgets/last-used/accounts"
   let x = decode <$> (encode <$> (r ^.. responseBody . key "data" . key "accounts" . _Array . traverse . _Object)) :: [Maybe Account]
   return $ g x -- put back in the IO monad
 
