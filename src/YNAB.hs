@@ -7,6 +7,8 @@ module YNAB where
 Module to deal with the YNAB API:
 
 https://api.youneedabudget.com/
+https://api.youneedabudget.com/#endpoints
+https://api.youneedabudget.com/v1#/Accounts/getAccountById
 
 -}
 
@@ -45,16 +47,17 @@ data Account = Account
   { accountId   :: T.Text
   , accountName :: T.Text
   , accountType :: T.Text
-  , balance     :: Int
+  , balance     :: Double
   } deriving (Show, Generic)
 
 instance FromJSON Account where
-  parseJSON (Object v) =
-    Account
-    <$> v .: "id"
-    <*> v .: "name"
-    <*> v .: "type"
-    <*> v .: "balance" -- TODO: turn into a Double? (right now this is a "millis": a 1000th of a dollar
+  parseJSON = withObject "account" $ \o -> do
+    aID    <- o .: "id"
+    name   <- o .: "name"
+    aType  <- o .: "type"
+    millis <- o .: "balance"
+    let balance = millis/1000 -- YNAB returns a 10s of cents representation of money for some reason (precision?)
+    return $ Account aID name aType balance
 
 
 {-
@@ -99,7 +102,7 @@ thing I do with a monad?
 
 -}
 
-dataPoints :: (Monad m, Functor f) => m (f Account) -> m (f Text, f Int)
+dataPoints :: (Monad m, Functor f) => m (f Account) -> m (f Text, f Double)
 dataPoints accounts = do
   account <- accounts
   -- these values can be stuck in a Maybe, so use fmap on them:
@@ -138,6 +141,24 @@ Notice that now our relevant data points are trapped in an IO monad, but we can,
 (allAccounts trackingAccounts) >>= print -- returns a list of only the tracking accounts, in IO
 
 and potentially, plot??
+
+Finally, all the crazy references I had to look at to finally sorta grok Aeson, Lenses and Wreq:
+
+* https://artyom.me/aeson
+* http://hackage.haskell.org/package/aeson-1.4.2.0/docs/Data-Aeson.html#g:2
+* http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html
+* http://deliberate-software.com/haskell-is-the-dark-souls-of-programming/
+* https://www.reddit.com/r/haskell/comments/23q8kc/wreq_a_capable_new_http_client_library/
+* http://hao.codes/lenses-heart-json.html
+* https://conscientiousprogrammer.com/blog/2015/12/04/24-days-of-hackage-2015-day-4-wreq-web-client-programming-with-notes-on-lens-and-operator-syntax/
+* http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Getter.html
+* http://hackage.haskell.org/package/lens-4.15.3/docs/Control-Lens-Getter.html#v:view
+* http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Fold.html
+* https://codereview.stackexchange.com/questions/115066/using-wreq-and-lens-libraries-to-query-prosper-for-account-info
+* https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/a-little-lens-starter-tutorial
+* https://github.com/ekmett/lens/blob/master/examples/Aeson.hs
+* http://hackage.haskell.org/package/wreq-0.5.3.2/docs/Network-Wreq.html#v:oauth2Bearer
+* http://hackage.haskell.org/package/aeson-1.4.2.0/docs/Data-Aeson-Types.html
 
 -}
 
