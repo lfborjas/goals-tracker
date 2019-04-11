@@ -28,6 +28,8 @@ dependencies:
 - wreq
 - lens
 - lens-aeson
+- directory
+- sqlite-simple
 
 library:
   source-dirs: src
