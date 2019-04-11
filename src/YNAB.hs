@@ -3,6 +3,7 @@
 
 module YNAB where
 
+
 {-
 Module to deal with the YNAB API:
 
@@ -60,6 +61,7 @@ instance FromJSON Account where
     return $ Account aID name aType balance
 
 
+
 {-
 
 And here is where I got stuck: there's no escaping the IO monad!
@@ -87,7 +89,7 @@ Just "50855054-efc4-4d49-8918-97bf198666"
 -}
 
 
--- this function feels like a bit of a defeat: why do I get to go so deeply in the lens and then have to re-get it as JSON?
+
 
 {-
 This works in the command line, but not as a motherfucking function:
