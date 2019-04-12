@@ -3,7 +3,6 @@
 
 module YNAB where
 
-
 {-
 Module to deal with the YNAB API:
 
@@ -23,9 +22,11 @@ import qualified Data.ByteString.Lazy.Char8 as LC
 import Network.HTTP.Simple
 import Network.Wreq
 import GHC.Generics
-import GHC.Base
+import GHC.Base (Alternative)
 import Control.Lens
 import Control.Monad
+
+import Models
 
 apiBase :: String
 apiBase = "https://api.youneedabudget.com/v1"
@@ -41,28 +42,6 @@ getResponseBody <$> response
 λ> response <- httpLBS budgetsRequest
 λ> getResponseBody response
 "{\"data\":{\"budgets\":[{\"id\":\"EGID\",\"name\":\"EG\",\"last_modified_on\":\"2019-04-02T02:21:41+00:00\",\"first_month\":\"2019-03-01\",\"last_month\":\"2019-04-01\",\"date_format\":{\"format\":\"MM/DD/YYYY\"},\"currency_format\":{\"iso_code\":\"USD\",\"example_format\":\"123,456.78\",\"decimal_digits\":2,\"decimal_separator\":\".\",\"symbol_first\":true,\"group_separator\":\",\",\"currency_symbol\":\"$\",\"display_symbol\":true}}]}}"
-
--}
-
-data Account = Account
-  { accountId   :: T.Text
-  , accountName :: T.Text
-  , accountType :: T.Text
-  , balance     :: Double
-  } deriving (Show, Generic)
-
-instance FromJSON Account where
-  parseJSON = withObject "account" $ \o -> do
-    aID    <- o .: "id"
-    name   <- o .: "name"
-    aType  <- o .: "type"
-    millis <- o .: "balance"
-    let balance = millis/1000 -- YNAB returns a 10s of cents representation of money for some reason (precision?)
-    return $ Account aID name aType balance
-
-
-
-{-
 
 And here is where I got stuck: there's no escaping the IO monad!
 I was trying to do things in separate functions but httpLBS returns an
@@ -85,22 +64,6 @@ Just "50855054-efc4-4d49-8918-97bf198666"
 
 λ> r <- fromApi "/budgets/last-used/accounts"
 λ> r ^? responseBody . key "data" . key "accounts" . _Array
-
--}
-
-
-
-
-{-
-This works in the command line, but not as a motherfucking function:
-
-λ> r <- fromApi "/budgets/last-used/accounts"
-λ> y = decode <$> (encode <$> (r ^.. responseBody . key "data" . key "accounts" . _Array . traverse . _Object)) :: [Maybe Account]
-λ> :t y
-y :: [Maybe Account]
-
-How the _fuck_ can I actually work with Accounts?????? It seems i'm trapped in the IO monad because r <- is the first
-thing I do with a monad?
 
 -}
 
