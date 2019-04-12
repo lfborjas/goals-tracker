@@ -1,0 +1,101 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 23fa25ca3ef27b40f84973b556d3da3026614cb430285585298f1a83e64346d6
+
+name:           goals-tracker
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/lfborjas/goals-tracker#readme>
+homepage:       https://github.com/lfborjas/goals-tracker#readme
+bug-reports:    https://github.com/lfborjas/goals-tracker/issues
+author:         Luis Borjas Reyes
+maintainer:     luis@lfborjas.com
+copyright:      2019 Luis Borjas Reyes
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/lfborjas/goals-tracker
+
+library
+  exposed-modules:
+      Lib
+      Models
+      Persistence
+      YNAB
+  other-modules:
+      Paths_goals_tracker
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , directory
+    , gi-gtk
+    , gi-gtk-declarative
+    , gi-gtk-declarative-app-simple
+    , http-conduit
+    , lens
+    , lens-aeson
+    , sqlite-simple
+    , text
+    , wreq
+  default-language: Haskell2010
+
+executable goals-tracker-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_goals_tracker
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -XOverloadedStrings
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , directory
+    , gi-gtk
+    , gi-gtk-declarative
+    , gi-gtk-declarative-app-simple
+    , goals-tracker
+    , http-conduit
+    , lens
+    , lens-aeson
+    , sqlite-simple
+    , text
+    , wreq
+  default-language: Haskell2010
+
+test-suite goals-tracker-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_goals_tracker
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , directory
+    , gi-gtk
+    , gi-gtk-declarative
+    , gi-gtk-declarative-app-simple
+    , goals-tracker
+    , http-conduit
+    , lens
+    , lens-aeson
+    , sqlite-simple
+    , text
+    , wreq
+  default-language: Haskell2010
