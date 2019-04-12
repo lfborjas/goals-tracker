@@ -60,4 +60,26 @@ We get
 Account {id_ = 1, name = "test account", balance = 333.33}
 Account {id_ = 2, name = "test account 2", balance = 333.33}
 
+
+Next Steps:
+
+in existing modules
+* go back to using M.Account, figure out the actual model and then modify the JSON And Row
+serializers to work with the bits they need.
+* implement an accountHistory table that tracks balance over time
+
+in Lib module
+* plot a history of a given account
+* implement a createFromAPI method in a new module, to persist an account from the API
+* implement an updateAllFromAPI method in a new module, to update existing accounts from the API
+* implement a Goal model, join table with Accounts?
+
+in main:
+* ???
+
+open questions: to keep imports sane, should Models be importing Persistence and YNAB
+and defining its serializers/helper methods there?
+
+
+* implement 
 -}
