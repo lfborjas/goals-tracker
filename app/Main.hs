@@ -91,6 +91,7 @@ updateChart cd ctx canvas = do
   return (True, Plotted)
 
 
+
 view' :: State -> AppView Window Event
 view' State {..} =
   bin
@@ -132,6 +133,7 @@ mkDate d m y =
 
 update' :: State -> Event -> Transition State Event
 update' State {..} Plotting = Transition (State otherData) (return Nothing)
+update' s          Plotted  = Transition s (return Nothing)
 update' _          Closed   = Exit
 
 main :: IO ()
