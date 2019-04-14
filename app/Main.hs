@@ -24,6 +24,7 @@ import           Data.Word (Word32)
 -- https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
 import Control.Lens
 import Data.Colour
+import Data.Colour.SRGB
 import Data.Colour.Names
 import Data.Default.Class
 import Graphics.Rendering.Chart
@@ -69,16 +70,16 @@ renderWithContext ct r = G.withManagedPtr ct $ \p ->
 -- see: https://github.com/timbod7/haskell-chart/wiki/How-to-use-backends
 -- https://github.com/timbod7/haskell-chart/blob/e2e1b375ec812cc4385d84e4acfd2575c5227fee/chart-gtk3/Graphics/Rendering/Chart/Gtk.hs
 -- from: https://github.com/owickstrom/gi-gtk-declarative/issues/15
-drawPlot :: PlotData -> C.Render (PickFn ())
-drawPlot cd = do
-  runBackend (defaultEnv bitmapAlignmentFns) (render (makeChart cd) (500,500))
+drawPlot :: PlotData -> (PlotData -> Renderable ()) -> C.Render (PickFn ())
+drawPlot cd chartFn = do
+  runBackend (defaultEnv bitmapAlignmentFns) (render (chartFn cd) (500,500))
 
 
 -- renders a line graph, good for plotting projections
 -- see: https://github.com/timbod7/haskell-chart/wiki/example-8
 -- and the examples in general: https://github.com/timbod7/haskell-chart/wiki
-makeChart' :: PlotData -> Renderable ()
-makeChart' cd = toRenderable layout
+plotLines :: PlotData -> Renderable ()
+plotLines cd = toRenderable layout
   where
     layout = layout_title .~ "Balance history"
       $ layout_background .~ solidFillStyle (opaque white)
@@ -98,8 +99,8 @@ makeChart' cd = toRenderable layout
 
 -- renders a bar graph, good for plotting discrete historical events
 -- see: https://github.com/timbod7/haskell-chart/wiki/example-11
-makeChart :: PlotData -> Renderable ()
-makeChart cd = toRenderable layout
+plotBar :: PlotData -> Renderable ()
+plotBar cd = toRenderable layout
   where
     layout = layout_title .~ "Balance History"
       $ layout_background .~ solidFillStyle (opaque white)
@@ -111,10 +112,27 @@ makeChart cd = toRenderable layout
       $ plot_bars_style       .~ BarsClustered
       $ def
 
+-- renders an area graph, perhaps good for tracking different account growths?
+-- see: https://github.com/timbod7/haskell-chart/wiki/example-3
+plotArea :: PlotData -> Renderable ()
+plotArea cd = toRenderable layout
+  where
+    layout = layout_title .~ "Balance History"
+      $ layout_grid_last  .~ True
+      $ layout_plots      .~ [ toPlot areaChart ]
+      $ def
+
+    areaChart = plot_fillbetween_style .~ solidFillStyle green1
+      $ plot_fillbetween_values .~ [ (d, (0, v)) | (d, v) <- cd ]
+      $ def
+
+    green1 = opaque $ sRGB 0.5 1 0.5
+    
+
 
 updateChart :: PlotData -> GI.Cairo.Context -> G.DrawingArea -> IO (Bool, Event)
 updateChart cd ctx canvas = do
-  renderWithContext ctx (drawPlot cd)
+  renderWithContext ctx (drawPlot cd plotArea)
   return (True, Plotted)
 
 
