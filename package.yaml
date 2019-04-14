@@ -31,6 +31,10 @@ dependencies:
 - directory
 - sqlite-simple
 - gi-gtk
+- gi-gtk-declarative
+- gi-gtk-declarative-app-simple
+- Chart
+- Chart-cairo
 
 # Note that the gi-gtk* dependencies are in stack.yml
 # since that package isn't in the LTS (stackage)

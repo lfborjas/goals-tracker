@@ -40,6 +40,10 @@ packages:
 extra-deps:
 - gi-gtk-declarative-0.4.2
 - gi-gtk-declarative-app-simple-0.4.1
+- gtk2hs-buildtools-0.13.5.0
+- cairo-0.13.6.0
+- Chart-1.9.1
+- Chart-cairo-1.9.1
 
 
 

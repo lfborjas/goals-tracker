@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 23fa25ca3ef27b40f84973b556d3da3026614cb430285585298f1a83e64346d6
+-- hash: 2aa5b072e85f5b80cafa3a0958a70e25777045d5e6571180097400ef472b3dfe
 
 name:           goals-tracker
 version:        0.1.0.0
@@ -36,7 +36,9 @@ library
   hs-source-dirs:
       src
   build-depends:
-      aeson
+      Chart
+    , Chart-cairo
+    , aeson
     , base >=4.7 && <5
     , bytestring
     , directory
@@ -59,7 +61,9 @@ executable goals-tracker-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -XOverloadedStrings
   build-depends:
-      aeson
+      Chart
+    , Chart-cairo
+    , aeson
     , base >=4.7 && <5
     , bytestring
     , directory
@@ -84,7 +88,9 @@ test-suite goals-tracker-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      aeson
+      Chart
+    , Chart-cairo
+    , aeson
     , base >=4.7 && <5
     , bytestring
     , directory
