@@ -10,12 +10,14 @@ import           Control.Monad                 (void)
 import           Data.Functor                  (($>))
 import           Data.Text                     (Text)
 import qualified Data.Text                     as Text
+import Data.Maybe
 
 import qualified GI.Gtk as G
 import           GI.Gtk.Declarative
 import           GI.Gtk.Declarative.App.Simple
 import           Data.Time.LocalTime
 import           Data.Time.Calendar -- introduces fromGregorian
+import           Data.Time.Format
 
 -- for plotting and cairo:
 -- https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
@@ -52,7 +54,8 @@ data Event = Plotted
            | Plotting
            | Closed
            | ProjectingBalance Text.Text
---           | ProjectingDate    Text.Text
+           | ProjectingDate    Text.Text
+
 
 -- from https://github.com/haskell-gi/haskell-gi/wiki/Using-Cairo-with-haskell-gi-generated-bindings
 -- notice that the example expects a Render (), but we actually end up with a Render (PickFn ())
@@ -115,24 +118,23 @@ view' s =
           G.Box
           [#orientation := G.OrientationHorizontal]
           [ expandingChild $ widget G.Label [#label := "Desired Balance" ]
-          ,expandingChild $ widget G.Entry [onM #activate (fmap ProjectingBalance . G.entryGetText)]
+          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingBalance . G.entryGetText)]
+          ,expandingChild $ widget G.Label [#label := "Expected Date" ]
+          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingDate . G.entryGetText)]
           ,expandingChild $ clickyButton "Draw Plot" $> Plotting ]
         ]
  where
   expandingChild =
     BoxChild defaultBoxChildProperties { expand = True, fill = True }
 
+parseDate d =
+  fromJust $ (parseTimeM True defaultTimeLocale "%Y-%m-%d" d :: Maybe LocalTime)
+
 initialData :: PlotData
 initialData = [
-   (mkDate 2019 01 01, 200)
-  ,(mkDate 2019 02 01, 300)
-  ,(mkDate 2019 03 01, 2000)
-  ]
-otherData :: PlotData
-otherData = [
-   (mkDate 2019 01 01, 200)
-  ,(mkDate 2019 02 01, 100)
-  ,(mkDate 2019 03 01, 20)
+   (parseDate "2019-01-01", 200)
+  ,(parseDate "2019-02-01", 300)
+  ,(parseDate "2019-03-01", 2000)
   ]
 
 projectData (State _chartData _projectionData) =
@@ -151,13 +153,15 @@ update' _          Closed   = Exit
 
 update' s (ProjectingBalance b) =
   Transition (s & projectionData._2 .~ (read (Text.unpack b) :: Double)) (return Nothing)
+update' s (ProjectingDate b) =
+  Transition (s & projectionData._1 .~ (parseDate (Text.unpack b))) (return Nothing)
 
 main :: IO ()
 main = void $ run App
   { view         = view'
   , update       = update'
   , inputs       = []
-  , initialState = State initialData (mkDate 2019 04 01, 0)
+  , initialState = State initialData (parseDate "2019-04-01", 0)
   }
 
 {-
@@ -168,5 +172,36 @@ export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig"
 ls /usr/local/opt/libffi
 stack install --help 
 brew install gtk+3
+
+Next steps:
+- add a points graph to show progression 
+
+
+GTK references:
+- https://github.com/owickstrom/gi-gtk-declarative/tree/04dceea04ba46ed854892e5a703eb95fe0952fb0/examples
+- https://hackage.haskell.org/package/cairo-0.13.5.0/docs/Graphics-Rendering-Cairo.html#t:Render
+- https://github.com/haskell-gi/gi-gtk-examples/blob/4c4f06dc91fbb9b9f50cdad295c8afe782e0bdec/menu/ComboDemo.hs
+- http://hackage.haskell.org/package/gi-gtk-3.0.27/docs/GI-Gtk-Objects-Entry.html#g:98
+http://hackage.haskell.org/package/gi-gtk-3.0.27/docs/GI-Gtk-Objects.html
+http://hackage.haskell.org/package/gi-gtk-3.0.27/docs/GI-Gtk-Objects-Widget.html#v:Widget
+http://hackage.haskell.org/package/gi-gtk-3.0.24/docs/GI-Gtk-Interfaces-FileChooser.html#v:fileChooserGetFilename
+https://github.com/haskell-gi/gi-gtk-examples/blob/master/treelist/TreeTest.hs
+http://hackage.haskell.org/package/gi-gtk-3.0.27/docs/GI-Gtk-Objects-Button.html#g:44
+https://owickstrom.github.io/gi-gtk-declarative/attributes/events/
+https://github.com/timbod7/haskell-chart/blob/master/chart-gtk3/Graphics/Rendering/Chart/Gtk.hs
+https://hackage.haskell.org/package/time-1.6.0.1/docs/Data-Time-Format.html
+http://hackage.haskell.org/package/base-4.12.0.0/docs/Data-Maybe.html
+https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
+https://github.com/haskell-gi/gi-gtk-examples/blob/master/filechooser/FileChooserDemo.hs
+
+
+This is a very neat one:
+https://haskell-at-work.com/episodes/2019-01-19-purely-functional-gtk-part-2-todo-mvc.html
+
+
+Not used in the end:
+https://formulae.brew.sh/formula/glade
+https://wiki.gnome.org/action/show/Apps/Glade/Tutorials?action=show&redirect=Glade%2FTutorials
+
 
 -}
