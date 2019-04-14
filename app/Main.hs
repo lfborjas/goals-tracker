@@ -18,7 +18,8 @@ import           GI.Gtk.Declarative.App.Simple
 import           Data.Time.LocalTime
 import           Data.Time.Calendar -- introduces fromGregorian
 
--- for plotting
+-- for plotting and cairo:
+-- https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
 import Control.Lens
 import Data.Colour
 import Data.Colour.Names
@@ -48,16 +49,22 @@ data State = State { chartData :: PlotData }
 data Event = Plotted | Plotting | Closed
 
 -- from https://github.com/haskell-gi/haskell-gi/wiki/Using-Cairo-with-haskell-gi-generated-bindings
-renderWithContext :: GI.Cairo.Context -> C.Render () -> IO ()
+-- notice that the example expects a Render (), but we actually end up with a Render (PickFn ())
+-- from the plotting lib
+renderWithContext :: GI.Cairo.Context -> C.Render c -> IO c
 renderWithContext ct r = withManagedPtr ct $ \p ->
   runReaderT (runRender r) (Cairo (castPtr p))
 
+-- see: https://github.com/timbod7/haskell-chart/wiki/How-to-use-backends
+-- https://github.com/timbod7/haskell-chart/blob/e2e1b375ec812cc4385d84e4acfd2575c5227fee/chart-gtk3/Graphics/Rendering/Chart/Gtk.hs
 -- from: https://github.com/owickstrom/gi-gtk-declarative/issues/15
-drawPlot :: PlotData -> C.Render ()
+drawPlot :: PlotData -> C.Render (PickFn ())
 drawPlot cd = do
-  C.rectangle 10 10 100 50
-  C.fill
+  runBackend (defaultEnv bitmapAlignmentFns) (render (makeChart cd) (500,500))
 
+
+-- see: https://github.com/timbod7/haskell-chart/wiki/example-8
+-- and the examples in general: https://github.com/timbod7/haskell-chart/wiki
 makeChart :: PlotData -> Renderable ()
 makeChart cd = toRenderable layout
   where
@@ -90,8 +97,8 @@ view' State {..} =
       Window
       [ #title := "Plot Example"
       , on #deleteEvent (const (True, Closed))
-      , #widthRequest := 400
-      , #heightRequest := 300
+      , #widthRequest := 1200
+      , #heightRequest := 900
       ]
     $ container
         Box
@@ -125,7 +132,7 @@ mkDate d m y =
 
 update' :: State -> Event -> Transition State Event
 update' State {..} Plotting = Transition (State otherData) (return Nothing)
-update' _          Closed = Exit
+update' _          Closed   = Exit
 
 main :: IO ()
 main = void $ run App
