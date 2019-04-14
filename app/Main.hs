@@ -74,10 +74,11 @@ drawPlot cd = do
   runBackend (defaultEnv bitmapAlignmentFns) (render (makeChart cd) (500,500))
 
 
+-- renders a line graph, good for plotting projections
 -- see: https://github.com/timbod7/haskell-chart/wiki/example-8
 -- and the examples in general: https://github.com/timbod7/haskell-chart/wiki
-makeChart :: PlotData -> Renderable ()
-makeChart cd = toRenderable layout
+makeChart' :: PlotData -> Renderable ()
+makeChart' cd = toRenderable layout
   where
     layout = layout_title .~ "Balance history"
       $ layout_background .~ solidFillStyle (opaque white)
@@ -93,7 +94,22 @@ makeChart cd = toRenderable layout
     lineStyle = line_width .~ 3*0.25
       $ line_color .~ opaque blue
       $ def
-  
+
+
+-- renders a bar graph, good for plotting discrete historical events
+-- see: https://github.com/timbod7/haskell-chart/wiki/example-11
+makeChart :: PlotData -> Renderable ()
+makeChart cd = toRenderable layout
+  where
+    layout = layout_title .~ "Balance History"
+      $ layout_background .~ solidFillStyle (opaque white)
+      $ layout_plots  .~ [ plotBars bars2 ]
+      $ layout_foreground .~ (opaque black)
+      $ def
+
+    bars2 = plot_bars_values  .~ [ (d,[v])| (d, v) <- cd ]
+      $ plot_bars_style       .~ BarsClustered
+      $ def
 
 
 updateChart :: PlotData -> GI.Cairo.Context -> G.DrawingArea -> IO (Bool, Event)
@@ -195,6 +211,13 @@ https://hackage.haskell.org/package/time-1.6.0.1/docs/Data-Time-Format.html
 http://hackage.haskell.org/package/base-4.12.0.0/docs/Data-Maybe.html
 https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
 https://github.com/haskell-gi/gi-gtk-examples/blob/master/filechooser/FileChooserDemo.hs
+http://hackage.haskell.org/package/gi-gtk-3.0.24/docs/GI-Gtk-Objects-Calendar.html#g:4
+https://developer.gnome.org/gtk3/stable/GtkCalendar.html#gtk-calendar-get-date
+
+Other references
+http://hackage.haskell.org/package/time-1.9.2/docs/Data-Time-Calendar.html
+http://hackage.haskell.org/package/base-4.12.0.0/docs/Data-Word.html
+
 
 
 This is a very neat one:
