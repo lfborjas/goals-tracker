@@ -35,6 +35,12 @@ dependencies:
 - gi-gtk-declarative-app-simple
 - Chart
 - Chart-cairo
+- cairo
+- gi-cairo
+- time
+- data-default-class
+- colour
+- transformers
 
 # Note that the gi-gtk* dependencies are in stack.yml
 # since that package isn't in the LTS (stackage)

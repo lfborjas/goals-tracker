@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2aa5b072e85f5b80cafa3a0958a70e25777045d5e6571180097400ef472b3dfe
+-- hash: ab241b78fe01b4a3982375598b25546c0fd9a816e7ee77112dd17fa848225127
 
 name:           goals-tracker
 version:        0.1.0.0
@@ -41,7 +41,11 @@ library
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , cairo
+    , colour
+    , data-default-class
     , directory
+    , gi-cairo
     , gi-gtk
     , gi-gtk-declarative
     , gi-gtk-declarative-app-simple
@@ -50,6 +54,8 @@ library
     , lens-aeson
     , sqlite-simple
     , text
+    , time
+    , transformers
     , wreq
   default-language: Haskell2010
 
@@ -66,7 +72,11 @@ executable goals-tracker-exe
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , cairo
+    , colour
+    , data-default-class
     , directory
+    , gi-cairo
     , gi-gtk
     , gi-gtk-declarative
     , gi-gtk-declarative-app-simple
@@ -76,6 +86,8 @@ executable goals-tracker-exe
     , lens-aeson
     , sqlite-simple
     , text
+    , time
+    , transformers
     , wreq
   default-language: Haskell2010
 
@@ -93,7 +105,11 @@ test-suite goals-tracker-test
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , cairo
+    , colour
+    , data-default-class
     , directory
+    , gi-cairo
     , gi-gtk
     , gi-gtk-declarative
     , gi-gtk-declarative-app-simple
@@ -103,5 +119,7 @@ test-suite goals-tracker-test
     , lens-aeson
     , sqlite-simple
     , text
+    , time
+    , transformers
     , wreq
   default-language: Haskell2010
