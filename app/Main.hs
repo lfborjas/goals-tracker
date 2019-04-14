@@ -246,5 +246,11 @@ Not used in the end:
 https://formulae.brew.sh/formula/glade
 https://wiki.gnome.org/action/show/Apps/Glade/Tutorials?action=show&redirect=Glade%2FTutorials
 
+Next:
 
+ask for a contribution, an end balance, an end date and an APY
+and plot:
+- the actual growth (with a bar graph?) based on the current balance, the end date, the contribution and the APY
+- a suggested contribution graph (calculate that)
+- a suggested end date graph
 -}
