@@ -18,6 +18,7 @@ import           GI.Gtk.Declarative.App.Simple
 import           Data.Time.LocalTime
 import           Data.Time.Calendar -- introduces fromGregorian
 import           Data.Time.Format
+import           Data.Word (Word32)
 
 -- for plotting and cairo:
 -- https://github.com/haskell-gi/haskell-gi/blob/master/examples/advanced/Cairo.hs
@@ -47,6 +48,7 @@ clickyButton label = widget G.Button [#label := label, on #clicked ButtonClicked
 type PlotData = [(LocalTime, Double)]
 type ProjectionData = (LocalTime, Double)
 
+
 data State = State { _chartData :: PlotData, _projectionData :: ProjectionData }
 makeLenses ''State
 
@@ -54,7 +56,7 @@ data Event = Plotted
            | Plotting
            | Closed
            | ProjectingBalance Text.Text
-           | ProjectingDate    Text.Text
+           | ProjectingDate    (Word32, Word32, Word32)
 
 
 -- from https://github.com/haskell-gi/haskell-gi/wiki/Using-Cairo-with-haskell-gi-generated-bindings
@@ -120,7 +122,7 @@ view' s =
           [ expandingChild $ widget G.Label [#label := "Desired Balance" ]
           ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingBalance . G.entryGetText)]
           ,expandingChild $ widget G.Label [#label := "Expected Date" ]
-          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingDate . G.entryGetText)]
+          ,expandingChild $ widget G.Calendar [onM #daySelected (fmap ProjectingDate . G.calendarGetDate)]
           ,expandingChild $ clickyButton "Draw Plot" $> Plotting ]
         ]
  where
@@ -144,7 +146,7 @@ projectData (State _chartData _projectionData) =
 
 -- from https://github.com/timbod7/haskell-chart/blob/master/chart-tests/tests/Prices.hs
 mkDate d m y =
-  LocalTime (fromGregorian (fromIntegral y) m d) midnight
+  LocalTime (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) midnight
 
 update' :: State -> Event -> Transition State Event
 update' s Plotting= Transition (projectData s) (return Nothing)
@@ -153,8 +155,8 @@ update' _          Closed   = Exit
 
 update' s (ProjectingBalance b) =
   Transition (s & projectionData._2 .~ (read (Text.unpack b) :: Double)) (return Nothing)
-update' s (ProjectingDate b) =
-  Transition (s & projectionData._1 .~ (parseDate (Text.unpack b))) (return Nothing)
+update' s (ProjectingDate (y, m, d)) =
+  Transition (s & projectionData._1 .~ (mkDate y m d)) (return Nothing)
 
 main :: IO ()
 main = void $ run App
