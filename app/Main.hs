@@ -145,7 +145,7 @@ projectData (State _chartData _projectionData) =
     newData = _chartData ++ [_projectionData]
 
 -- from https://github.com/timbod7/haskell-chart/blob/master/chart-tests/tests/Prices.hs
-mkDate d m y =
+mkDate y m d =
   LocalTime (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) midnight
 
 update' :: State -> Event -> Transition State Event

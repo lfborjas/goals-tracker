@@ -81,5 +81,8 @@ open questions: to keep imports sane, should Models be importing Persistence and
 and defining its serializers/helper methods there?
 
 
-* implement 
+* implement the actual UI:
+- make the hello world work
+- plot some existing account data in gtk (make sure we can plot to begin with)
+- 
 -}
