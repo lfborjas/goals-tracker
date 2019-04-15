@@ -39,6 +39,9 @@ import Foreign.Ptr (castPtr)
 
 import qualified GI.Cairo as GI.Cairo
 
+-- my own modules
+import Lib
+
 
 data ButtonEvent = ButtonClicked
 
@@ -46,18 +49,23 @@ clickyButton :: Text -> Widget ButtonEvent
 clickyButton label = widget G.Button [#label := label, on #clicked ButtonClicked]
 
 
-type PlotData = [(LocalTime, Double)]
-type ProjectionData = (LocalTime, Double)
+data ProjectionForm = ProjectionForm
+                      { _startDate :: Day
+                      , _currentBalance :: Balance
+                      , _expenses :: Balance
+                      }
 
+makeLenses ''ProjectionForm
 
-data State = State { _chartData :: PlotData, _projectionData :: ProjectionData }
+data State = State { _chartData :: PlotData, _projectionData :: ProjectionForm }
 makeLenses ''State
 
 data Event = Plotted
            | Plotting
            | Closed
-           | ProjectingBalance Text.Text
-           | ProjectingDate    (Word32, Word32, Word32)
+           | ProjectingCurrentBalance Text.Text
+           | ProjectingExpenses Text.Text
+           | ProjectingStartDate    (Word32, Word32, Word32)
 
 
 -- from https://github.com/haskell-gi/haskell-gi/wiki/Using-Cairo-with-haskell-gi-generated-bindings
@@ -72,7 +80,7 @@ renderWithContext ct r = G.withManagedPtr ct $ \p ->
 -- from: https://github.com/owickstrom/gi-gtk-declarative/issues/15
 drawPlot :: PlotData -> (PlotData -> Renderable ()) -> C.Render (PickFn ())
 drawPlot cd chartFn = do
-  runBackend (defaultEnv bitmapAlignmentFns) (render (chartFn cd) (500,500))
+  runBackend (defaultEnv bitmapAlignmentFns) (render (chartFn cd) (600,400))
 
 
 -- renders a line graph, good for plotting projections
@@ -132,7 +140,7 @@ plotArea cd = toRenderable layout
 
 updateChart :: PlotData -> GI.Cairo.Context -> G.DrawingArea -> IO (Bool, Event)
 updateChart cd ctx canvas = do
-  renderWithContext ctx (drawPlot cd plotArea)
+  renderWithContext ctx (drawPlot cd plotBar)
   return (True, Plotted)
 
 
@@ -143,8 +151,8 @@ view' s =
       G.Window
       [ #title := "Plot Example"
       , on #deleteEvent (const (True, Closed))
-      , #widthRequest := 1200
-      , #heightRequest := 900
+      , #widthRequest := 800
+      , #heightRequest := 600
       ]
     $ container
         G.Box
@@ -153,10 +161,12 @@ view' s =
         , BoxChild defaultBoxChildProperties $ container
           G.Box
           [#orientation := G.OrientationHorizontal]
-          [ expandingChild $ widget G.Label [#label := "Desired Balance" ]
-          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingBalance . G.entryGetText)]
-          ,expandingChild $ widget G.Label [#label := "Expected Date" ]
-          ,expandingChild $ widget G.Calendar [onM #daySelected (fmap ProjectingDate . G.calendarGetDate)]
+          [expandingChild $ widget G.Label [#label := "Current Balance" ]
+          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingCurrentBalance . G.entryGetText)]
+          ,expandingChild $ widget G.Label [#label := "Expenses" ]
+          ,expandingChild $ widget G.Entry [onM #changed (fmap ProjectingExpenses . G.entryGetText)]
+          ,expandingChild $ widget G.Label [#label := "Start Date" ]
+          ,expandingChild $ widget G.Calendar [onM #daySelected (fmap ProjectingStartDate . G.calendarGetDate)]
           ,expandingChild $ clickyButton "Draw Plot" $> Plotting ]
         ]
  where
@@ -164,7 +174,7 @@ view' s =
     BoxChild defaultBoxChildProperties { expand = True, fill = True }
 
 parseDate d =
-  fromJust $ (parseTimeM True defaultTimeLocale "%Y-%m-%d" d :: Maybe LocalTime)
+  fromJust $ (parseTimeM True defaultTimeLocale "%Y-%m-%d" d :: Maybe Day)
 
 initialData :: PlotData
 initialData = [
@@ -173,31 +183,36 @@ initialData = [
   ,(parseDate "2019-03-01", 2000)
   ]
 
+-- TODO: pattern match with other possibilities?
 projectData (State _chartData _projectionData) =
   (State newData _projectionData)
   where
-    newData = _chartData ++ [_projectionData]
+    (_, newData) = calculateRunway (_startDate _projectionData)
+      (_currentBalance _projectionData)
+      (_expenses _projectionData)
 
 -- from https://github.com/timbod7/haskell-chart/blob/master/chart-tests/tests/Prices.hs
 mkDate y m d =
-  LocalTime (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) midnight
+  (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) 
 
 update' :: State -> Event -> Transition State Event
-update' s Plotting= Transition (projectData s) (return Nothing)
+update' s          Plotting = Transition (projectData s) (return Nothing)
 update' s          Plotted  = Transition s (return Nothing)
 update' _          Closed   = Exit
 
-update' s (ProjectingBalance b) =
-  Transition (s & projectionData._2 .~ (read (Text.unpack b) :: Double)) (return Nothing)
-update' s (ProjectingDate (y, m, d)) =
-  Transition (s & projectionData._1 .~ (mkDate y m d)) (return Nothing)
+update' s (ProjectingExpenses b) =
+  Transition (s & projectionData.expenses .~ (read (Text.unpack b) :: Double)) (return Nothing)
+update' s (ProjectingCurrentBalance b) =
+  Transition (s & projectionData.currentBalance .~ (read (Text.unpack b) :: Double)) (return Nothing)
+update' s (ProjectingStartDate (y, m, d)) =
+  Transition (s & projectionData.startDate .~ (mkDate y m d)) (return Nothing)
 
 main :: IO ()
 main = void $ run App
   { view         = view'
   , update       = update'
   , inputs       = []
-  , initialState = State initialData (parseDate "2019-04-01", 0)
+  , initialState = State initialData (ProjectionForm (fromGregorian 2019 04 14) 0 0)
   }
 
 {-
@@ -253,4 +268,10 @@ and plot:
 - the actual growth (with a bar graph?) based on the current balance, the end date, the contribution and the APY
 - a suggested contribution graph (calculate that)
 - a suggested end date graph
+
+Extract visualization code into a Visualization module and:
+
+- be able to have multiple graphs per canvas
+- be able to graph e.g. runway vs. growth of untouched assets
+- be able to show balance when an APY is involved??
 -}
