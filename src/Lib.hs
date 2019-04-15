@@ -47,11 +47,12 @@ projectBalance (startingDate, startingBalance) (Contribution f increment) expect
     allBalances  = iterate (+increment) startingBalance
     allDates     = iterate (addDays f)  startingDate
 
--- projectContribution :: ProjectionData -> Day -> Balance -> (Maybe Int, Maybe Balance) -> (Contribution, [ProjectionData])
--- projectContribution (sd, sb) ed eb (mFreq, mBal) = case (mFreq, mBal) of
---   (Just freq,  Nothing) -> guessContributionAmount (sd, sb) ed eb freq
---   (Nothing,  Just bal ) -> guessContributionFreq   (sd, sb) ed eb bal
---   (Just freq, Just bal) -> expandContribution      (sd, sb) ed eb (Contribution freq bal)
+projectContribution :: ProjectionData -> Day -> Balance -> (Maybe Integer, Maybe Balance) -> (Contribution, [ProjectionData])
+projectContribution (sd, sb) ed eb (mFreq, mBal) = case (mFreq, mBal) of
+  (Just freq,  Nothing) -> guessContributionAmount      (sd, sb) ed eb freq
+  (Nothing,  Just bal ) -> guessContributionFrequency   (sd, sb) ed eb bal
+  (Just freq, Just bal) -> expandContribution           (sd, sb) ed eb (Contribution freq bal)
+  (Nothing,    Nothing) -> (Contribution 0 0.0, [])
 
 
 guessContributionAmount :: ProjectionData -> Day -> Balance -> Integer -> (Contribution, [ProjectionData])
@@ -63,7 +64,7 @@ guessContributionAmount (startingDay, startingBalance) endDay endBalance frequen
     dateSteps    = takeWhile (<=endDay) allDates
     allBalances  = iterate (+increment) startingBalance
     allDates     = iterate (addDays frequency) startingDay
-    increment    = (endBalance - startingBalance) / fromIntegral (length dateSteps)
+    increment    = (endBalance - startingBalance) / ((fromIntegral (length dateSteps)) - 1)
 
 guessContributionFrequency :: ProjectionData -> Day -> Balance -> Double -> (Contribution, [ProjectionData])
 guessContributionFrequency (startingDay, startingBalance) endDay endBalance amount =
