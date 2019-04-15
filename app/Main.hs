@@ -39,6 +39,8 @@ import Foreign.Ptr (castPtr)
 
 import qualified GI.Cairo as GI.Cairo
 
+-- my own modules
+import Lib
 
 data ButtonEvent = ButtonClicked
 
