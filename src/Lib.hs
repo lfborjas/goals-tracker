@@ -10,6 +10,7 @@ type Balance = Double
 type PlotData = [(LocalTime, Balance)]
 type ProjectionData = (LocalTime, Balance)
 
+
 data Contribution = Contribution
   { _frequency :: Integer -- days
   , _amount    :: Balance
@@ -28,11 +29,21 @@ makeLenses ''Contribution
 --     endBalance = 
 
 -- stepsFromTo :: 
-
-projectDate :: Balance -> Day -> Contribution -> Balance -> [(Balance, Day)]
+mkProjectionData :: Day -> Balance -> ProjectionData
+mkProjectionData d b = ((LocalTime d midnight), b)
+  
+projectDate :: Balance -> Day -> Contribution -> Balance -> [ProjectionData]
 projectDate startingBalance startingDate (Contribution f increment) expectedBalance =
-  zip balanceSteps allDates
+  zipWith (flip mkProjectionData) balanceSteps allDates
   where
     balanceSteps = takeWhile (<=expectedBalance) allBalances
+    allBalances  = iterate (+increment) startingBalance
+    allDates     = iterate (addDays f)  startingDate
+
+projectBalance :: Balance -> Day -> Contribution -> Day -> [ProjectionData]
+projectBalance startingBalance startingDate (Contribution f increment) expectedDate =
+  zipWith mkProjectionData dateSteps allBalances
+  where
+    dateSteps    = takeWhile (<=expectedDate) allDates
     allBalances  = iterate (+increment) startingBalance
     allDates     = iterate (addDays f)  startingDate
