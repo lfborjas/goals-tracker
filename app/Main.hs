@@ -268,4 +268,10 @@ and plot:
 - the actual growth (with a bar graph?) based on the current balance, the end date, the contribution and the APY
 - a suggested contribution graph (calculate that)
 - a suggested end date graph
+
+Extract visualization code into a Visualization module and:
+
+- be able to have multiple graphs per canvas
+- be able to graph e.g. runway vs. growth of untouched assets
+- be able to show balance when an APY is involved??
 -}
