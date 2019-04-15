@@ -30,6 +30,21 @@ dependencies:
 - lens-aeson
 - directory
 - sqlite-simple
+- gi-gtk
+- gi-gtk-declarative
+- gi-gtk-declarative-app-simple
+- Chart
+- Chart-cairo
+- cairo
+- gi-cairo
+- time
+- data-default-class
+- colour
+- transformers
+
+# Note that the gi-gtk* dependencies are in stack.yml
+# since that package isn't in the LTS (stackage)
+# in fact, I had to _manually_ add them to the cabal file??
 
 library:
   source-dirs: src
