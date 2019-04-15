@@ -19,38 +19,40 @@ makeLenses ''Contribution
 
 
 -- small utility fns:
+-- just letting type inference do its thing with this one
+allSteps incf start step =
+  iterate (incf step) start
 
--- balancesUntil expectedBalance = takeWhile (<=expectedBalance)
--- stepBalances  step            = iterate (+step)
--- datesUntil    expectedDate    = takeWhile (<=expectedDate)
--- stepDates     step            = iterate (addDays step)
+stepsUntil incf start end step
+  | start < end  = stepWhen (<=end)
+  | start > end  = stepWhen (>=end)
+  | start == end = [start]
+  where stepWhen goalSection =
+          takeWhile goalSection $ allSteps incf start step
 
+balancesUntil = stepsUntil (+)
+datesUntil    = stepsUntil addDays
+allBalances   = allSteps (+)
+allDates      = allSteps addDays
 
-balancesUntil sb eb s
-  | sb < eb  = stepWhen (<=eb) s sb
-  | sb > eb  = stepWhen (>=eb) s sb
-  | sb == eb = [sb]
-  where stepWhen goalSection step starting =
-          takeWhile goalSection $ iterate (+step) starting
 
 projectDate :: ProjectionData -> Contribution -> Balance -> (Day, [ProjectionData])
 projectDate (startingDate, startingBalance) (Contribution f increment) expectedBalance =
   (endDate, datesToBal)
   where
     (endDate, _) = last datesToBal
-    datesToBal   = zipWith (flip (,)) balanceSteps allDates
+    datesToBal   = zipWith (flip (,)) balanceSteps $ allDates startingDate f
     balanceSteps = balancesUntil startingBalance expectedBalance increment
-    allDates     = iterate (addDays f)  startingDate
+
 
 projectBalance :: ProjectionData -> Contribution -> Day -> (Balance, [ProjectionData])
 projectBalance (startingDate, startingBalance) (Contribution f increment) expectedDate =
   (endBalance, balsToDate)
   where
     (_, endBalance) = last balsToDate
-    balsToDate      = zipWith (,) dateSteps allBalances
-    dateSteps    = takeWhile (<=expectedDate) allDates
-    allBalances  = iterate (+increment) startingBalance
-    allDates     = iterate (addDays f)  startingDate
+    balsToDate      = zipWith (,) dateSteps $ allBalances startingBalance increment
+    dateSteps       = datesUntil startingDate expectedDate f
+
 
 projectContribution :: ProjectionData -> Day -> Balance -> (Maybe Integer, Maybe Balance) -> (Contribution, [ProjectionData])
 projectContribution (sd, sb) ed eb (mFreq, mBal) = case (mFreq, mBal) of
@@ -65,10 +67,8 @@ guessContributionAmount (startingDay, startingBalance) endDay endBalance frequen
   ((Contribution frequency increment), steps)
   where
     steps        = zip dateSteps balanceSteps
-    balanceSteps = takeWhile (<=endBalance) allBalances
-    dateSteps    = takeWhile (<=endDay) allDates
-    allBalances  = iterate (+increment) startingBalance
-    allDates     = iterate (addDays frequency) startingDay
+    balanceSteps = balancesUntil startingBalance endBalance increment
+    dateSteps    = datesUntil startingDay endDay frequency
     increment    = (endBalance - startingBalance) / ((fromIntegral (length dateSteps)) - 1)
 
 guessContributionFrequency :: ProjectionData -> Day -> Balance -> Double -> (Contribution, [ProjectionData])
@@ -76,21 +76,18 @@ guessContributionFrequency (startingDay, startingBalance) endDay endBalance amou
   ((Contribution dateIncrement amount), steps)
   where
     steps         = zip dateSteps balanceSteps
-    balanceSteps  = takeWhile (<=endBalance) allBalances
-    dateSteps     = takeWhile (<=endDay) allDates
-    allBalances   = iterate (+amount) startingBalance
-    allDates      = iterate (addDays dateIncrement) startingDay
+    balanceSteps  = balancesUntil startingBalance endBalance amount
+    dateSteps     = datesUntil startingDay endDay dateIncrement
     dateIncrement = (diffDays endDay startingDay) `div` (fromIntegral (length balanceSteps)) :: Integer
 
 expandContribution :: ProjectionData -> Day -> Balance -> Contribution -> (Contribution, [ProjectionData])
 expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
   (c, steps)
   where
-    steps = zip dateSteps balanceSteps
-    balanceSteps  = takeWhile (<=eb) allBalances
-    dateSteps     = takeWhile (<=ed) allDates
-    allBalances   = iterate (+increment) sb
-    allDates      = iterate (addDays frequency) sd
+    steps = zip dates bals
+    dates = datesUntil sd ed frequency
+    bals  = balancesUntil sb eb increment
+
 
 calculateRunway :: Day -> Balance -> Balance -> (Day, [ProjectionData])
 calculateRunway start balance expenses = projectDate (start, balance) (Contribution 30 (negate expenses)) 0
