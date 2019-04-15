@@ -7,8 +7,8 @@ import Data.Time
 import Data.Time.Calendar
 
 type Balance = Double
-type PlotData = [(LocalTime, Balance)]
-type ProjectionData = (LocalTime, Balance)
+type PlotData = [(Day, Balance)]
+type ProjectionData = (Day, Balance)
 
 
 data Contribution = Contribution
@@ -29,12 +29,10 @@ makeLenses ''Contribution
 --     endBalance = 
 
 -- stepsFromTo :: 
-mkProjectionData :: Day -> Balance -> ProjectionData
-mkProjectionData d b = ((LocalTime d midnight), b)
   
 projectDate :: Balance -> Day -> Contribution -> Balance -> [ProjectionData]
 projectDate startingBalance startingDate (Contribution f increment) expectedBalance =
-  zipWith (flip mkProjectionData) balanceSteps allDates
+  zipWith (flip (,)) balanceSteps allDates
   where
     balanceSteps = takeWhile (<=expectedBalance) allBalances
     allBalances  = iterate (+increment) startingBalance
@@ -42,8 +40,10 @@ projectDate startingBalance startingDate (Contribution f increment) expectedBala
 
 projectBalance :: Balance -> Day -> Contribution -> Day -> [ProjectionData]
 projectBalance startingBalance startingDate (Contribution f increment) expectedDate =
-  zipWith mkProjectionData dateSteps allBalances
+  zipWith (,) dateSteps allBalances
   where
     dateSteps    = takeWhile (<=expectedDate) allDates
     allBalances  = iterate (+increment) startingBalance
     allDates     = iterate (addDays f)  startingDate
+
+

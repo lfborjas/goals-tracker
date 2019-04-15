@@ -42,14 +42,14 @@ import qualified GI.Cairo as GI.Cairo
 -- my own modules
 import Lib
 
+
 data ButtonEvent = ButtonClicked
 
 clickyButton :: Text -> Widget ButtonEvent
 clickyButton label = widget G.Button [#label := label, on #clicked ButtonClicked]
 
 
-type PlotData = [(LocalTime, Double)]
-type ProjectionData = (LocalTime, Double)
+
 
 
 data State = State { _chartData :: PlotData, _projectionData :: ProjectionData }
@@ -166,7 +166,7 @@ view' s =
     BoxChild defaultBoxChildProperties { expand = True, fill = True }
 
 parseDate d =
-  fromJust $ (parseTimeM True defaultTimeLocale "%Y-%m-%d" d :: Maybe LocalTime)
+  fromJust $ (parseTimeM True defaultTimeLocale "%Y-%m-%d" d :: Maybe Day)
 
 initialData :: PlotData
 initialData = [
@@ -182,7 +182,7 @@ projectData (State _chartData _projectionData) =
 
 -- from https://github.com/timbod7/haskell-chart/blob/master/chart-tests/tests/Prices.hs
 mkDate y m d =
-  LocalTime (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) midnight
+  (fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)) 
 
 update' :: State -> Event -> Transition State Event
 update' s Plotting= Transition (projectData s) (return Nothing)
