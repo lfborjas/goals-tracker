@@ -20,12 +20,18 @@ makeLenses ''Contribution
 
 -- small utility fns:
 
-balancesUntil expectedBalance = takeWhile (<=expectedBalance)
-stepBalances  step            = iterate (+step)
-datesUntil    expectedDate    = takeWhile (<=expectedDate)
-stepDates     step            = iterate (addDays step)
+-- balancesUntil expectedBalance = takeWhile (<=expectedBalance)
+-- stepBalances  step            = iterate (+step)
+-- datesUntil    expectedDate    = takeWhile (<=expectedDate)
+-- stepDates     step            = iterate (addDays step)
 
 
+balancesUntil sb eb s
+  | sb < eb  = stepWhen (<=eb) s sb
+  | sb > eb  = stepWhen (>=eb) s sb
+  | sb == eb = [sb]
+  where stepWhen goalSection step starting =
+          takeWhile goalSection $ iterate (+step) starting
 
 projectDate :: ProjectionData -> Contribution -> Balance -> (Day, [ProjectionData])
 projectDate (startingDate, startingBalance) (Contribution f increment) expectedBalance =
@@ -33,8 +39,7 @@ projectDate (startingDate, startingBalance) (Contribution f increment) expectedB
   where
     (endDate, _) = last datesToBal
     datesToBal   = zipWith (flip (,)) balanceSteps allDates
-    balanceSteps = takeWhile (<=expectedBalance) allBalances
-    allBalances  = iterate (+increment) startingBalance
+    balanceSteps = balancesUntil startingBalance expectedBalance increment
     allDates     = iterate (addDays f)  startingDate
 
 projectBalance :: ProjectionData -> Contribution -> Day -> (Balance, [ProjectionData])
@@ -86,3 +91,6 @@ expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
     dateSteps     = takeWhile (<=ed) allDates
     allBalances   = iterate (+increment) sb
     allDates      = iterate (addDays frequency) sd
+
+calculateRunway :: Day -> Balance -> Balance -> (Day, [ProjectionData])
+calculateRunway start balance expenses = projectDate (start, balance) (Contribution 30 (negate expenses)) 0
