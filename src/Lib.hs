@@ -64,3 +64,24 @@ guessContributionAmount (startingDay, startingBalance) endDay endBalance frequen
     allBalances  = iterate (+increment) startingBalance
     allDates     = iterate (addDays frequency) startingDay
     increment    = (endBalance - startingBalance) / fromIntegral (length dateSteps)
+
+guessContributionFrequency :: ProjectionData -> Day -> Balance -> Double -> (Contribution, [ProjectionData])
+guessContributionFrequency (startingDay, startingBalance) endDay endBalance amount =
+  ((Contribution dateIncrement amount), steps)
+  where
+    steps         = zip dateSteps balanceSteps
+    balanceSteps  = takeWhile (<=endBalance) allBalances
+    dateSteps     = takeWhile (<=endDay) allDates
+    allBalances   = iterate (+amount) startingBalance
+    allDates      = iterate (addDays dateIncrement) startingDay
+    dateIncrement = (diffDays endDay startingDay) `div` (fromIntegral (length balanceSteps)) :: Integer
+
+expandContribution :: ProjectionData -> Day -> Balance -> Contribution -> (Contribution, [ProjectionData])
+expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
+  (c, steps)
+  where
+    steps = zip dateSteps balanceSteps
+    balanceSteps  = takeWhile (<=eb) allBalances
+    dateSteps     = takeWhile (<=ed) allDates
+    allBalances   = iterate (+increment) sb
+    allDates      = iterate (addDays frequency) sd
