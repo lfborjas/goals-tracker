@@ -11,6 +11,11 @@ type PlotData = [(Day, Balance)]
 type ProjectionData = (Day, Balance)
 
 
+data Rate = Rate
+  { percent :: Double
+  , payoffFrequency :: Integer
+  } deriving Show
+
 data Contribution = Contribution
   { _frequency :: Integer -- days
   , _amount    :: Balance
@@ -91,3 +96,30 @@ expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
 
 calculateRunway :: Day -> Balance -> Balance -> (Day, [ProjectionData])
 calculateRunway start balance expenses = projectDate (start, balance) (Contribution 30 (negate expenses)) 0
+
+growth ::
+  Integer -> -- payoff frequency
+  Double  -> -- interest rate
+  Double  -> -- principal
+  Double     -- principal with applied interest
+growth n i p = p + p * ((1+i)^n -1)
+
+compoundingRate ::
+  Rate ->    -- nominal rate, and payoff frequency
+  Double     -- rate per compounding time
+compoundingRate (Rate r f) = r/fromIntegral f
+
+compoundInterest ::
+  Balance ->
+  Rate ->
+  Day ->
+  Day -> (Balance, [ProjectionData])
+compoundInterest principal r@(Rate i f) start end =
+  (finalBalance, steps)
+  where
+    steps        = zip dates bals
+    finalBalance = (snd . last) steps
+    dates        = datesUntil start end freq -- TODO: freq shouldn't be an int!
+    freq         = 365 -- days
+    rate         = (compoundingRate r)/(fromIntegral 100)
+    bals         = iterate (growth f rate) principal
