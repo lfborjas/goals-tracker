@@ -178,3 +178,44 @@ compoundWithContribution principal rate start end c@(Contribution_ contribution 
     finalBalance = (snd . last) steps
     dates = datesUntil' freq start end 1
     bals = iterate (growthWithContribution contribution rate) principal
+
+
+-- assumes that the contribution is done at the same frequency as the
+-- rate is paid off
+growPrincipal ::
+  Balance -> Rate -> Contribution_ -> [Balance]
+growPrincipal principal rate (Contribution_ contribution _) =
+  iterate (growthWithContribution contribution rate) principal
+
+combineBalances ::
+  [[Balance]] ->
+  [Balance]
+combineBalances projections =
+  foldr1 (zipWith (+)) projections
+
+-- NB: this is weirdly buggy -- only really works if the frequency
+-- is the same as the payoff of the contribution; there must be a way
+-- to generalize it??
+growthInPeriod ::
+  [[Balance]] -> -- all accounts involved
+  Day -> Day  -> -- start, end
+  Frequency   -> -- date step
+  [ProjectionData]
+growthInPeriod balanceHistories start end freq=
+  zip dates combinedHistory
+  where
+    combinedHistory = combineBalances balanceHistories
+    dates           = datesUntil' freq start end 1
+
+{-
+For example:
+
+λ> b = growPrincipal 10000 (Rate 2 Monthly) (Contribution_ 1200 Monthly)
+λ> a = growPrincipal 10000 (Rate 2 Monthly) (Contribution_ 1200 Monthly)
+λ> growthInPeriod [a,b] (fromGregorian 2019 04 21) (fromGregorian 2020 04 21) Yearly
+[(2019-04-21,20000.0),(2020-04-21,22803.68711363004)]
+λ> growthInPeriod [a,b] (fromGregorian 2019 04 21) (fromGregorian 2020 04 21) Monthly
+[(2019-04-21,20000.0),(2019-05-21,22803.68711363004),(2019-06-21,25663.96484518123),(2019-07-21,28581.975439813934),(2019-08-21,31558.884198171094),(2019-09-21,34595.87994173831),(2019-10-21,37694.1754875969),(2019-11-21,40855.00813275951),(2019-12-21,44079.64014828179),(2020-01-21,47369.35928334732),(2020-02-21,50725.479279527266),(2020-03-21,54149.3403954199),(2020-04-21,57642.30994187978)]
+λ> 
+
+-}
