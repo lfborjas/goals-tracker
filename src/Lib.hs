@@ -11,16 +11,40 @@ type PlotData = [(Day, Balance)]
 type ProjectionData = (Day, Balance)
 
 
-data Rate = Rate
-  { percent :: Double
-  , payoffFrequency :: Integer
-  } deriving Show
 
 data Contribution = Contribution
   { _frequency :: Integer -- days
   , _amount    :: Balance
   } deriving Show
 makeLenses ''Contribution
+
+data Frequency = Daily | Monthly | Yearly deriving Show
+
+-- frequency in the context of a calendar year
+instance Enum Frequency where
+  fromEnum Daily   = 365
+  fromEnum Monthly = 12
+  fromEnum Yearly  = 1
+
+  toEnum   1   = Yearly
+  toEnum   12  = Monthly
+  toEnum   365 = Daily
+  toEnum   _   = error "Invalid frequency"
+
+data Rate = Rate
+  { percent :: Double
+  , payoffFrequency :: Frequency
+  } deriving Show
+
+
+
+dateInc ::
+  Frequency ->
+  (Integer -> Day -> Day) -- step, start, result
+dateInc freq = case freq of
+                 Daily   -> addDays
+                 Monthly -> addGregorianMonthsClip
+                 Yearly  -> addGregorianYearsClip
 
 
 -- small utility fns:
@@ -36,9 +60,11 @@ stepsUntil incf start end step
           takeWhile goalSection $ allSteps incf start step
 
 balancesUntil = stepsUntil (+)
-datesUntil    = stepsUntil addDays
+datesUntil     = stepsUntil $ dateInc Daily
 allBalances   = allSteps (+)
-allDates      = allSteps addDays
+allDates       = allSteps $ dateInc Daily
+
+datesUntil' f = stepsUntil (dateInc f)
 
 
 projectDate :: ProjectionData -> Contribution -> Balance -> (Day, [ProjectionData])
@@ -97,29 +123,34 @@ expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
 calculateRunway :: Day -> Balance -> Balance -> (Day, [ProjectionData])
 calculateRunway start balance expenses = projectDate (start, balance) (Contribution 30 (negate expenses)) 0
 
+
 growth ::
-  Integer -> -- payoff frequency
-  Double  -> -- interest rate
+  Rate    -> -- interest rate
   Double  -> -- principal
   Double     -- principal with applied interest
-growth n i p = p + p * ((1+i)^n -1)
+growth r@(Rate _ f) p = p + p * ((1+i)^n -1)
+  where
+    n  = fromEnum f
+    i  = compoundingRate r 
 
 compoundingRate ::
   Rate ->    -- nominal rate, and payoff frequency
   Double     -- rate per compounding time
-compoundingRate (Rate r f) = r/fromIntegral f
+compoundingRate (Rate r f) = (r/fromIntegral (fromEnum f))/(fromIntegral 100)
 
+-- this was surprisingly helpful in confirming results:
+-- http://www.webmath.com/compinterest.html
 compoundInterest ::
-  Balance ->
-  Rate ->
-  Day ->
-  Day -> (Balance, [ProjectionData])
-compoundInterest principal r@(Rate i f) start end =
+  Balance   -> -- principal
+  Rate      -> -- interest rate
+  Day       -> -- start date
+  Day       -> -- end date
+  Frequency -> -- date step
+  (Balance, [ProjectionData])
+compoundInterest principal rate start end freq =
   (finalBalance, steps)
   where
     steps        = zip dates bals
     finalBalance = (snd . last) steps
-    dates        = datesUntil start end freq -- TODO: freq shouldn't be an int!
-    freq         = 365 -- days
-    rate         = (compoundingRate r)/(fromIntegral 100)
-    bals         = iterate (growth f rate) principal
+    dates        = datesUntil' freq start end 1
+    bals         = iterate (growth rate) principal
