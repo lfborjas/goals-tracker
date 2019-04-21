@@ -36,7 +36,11 @@ data Rate = Rate
   , payoffFrequency :: Frequency
   } deriving Show
 
-
+data Contribution_ = Contribution_
+  { 
+    amount_    :: Balance
+  , frequency_ :: Frequency
+  } deriving Show
 
 dateInc ::
   Frequency ->
@@ -123,6 +127,7 @@ expandContribution (sd, sb) ed eb c@(Contribution frequency increment) =
 calculateRunway :: Day -> Balance -> Balance -> (Day, [ProjectionData])
 calculateRunway start balance expenses = projectDate (start, balance) (Contribution 30 (negate expenses)) 0
 
+-- fancier operations
 
 growth ::
   Rate    -> -- interest rate
@@ -131,7 +136,12 @@ growth ::
 growth r@(Rate _ f) p = p + p * ((1+i)^n -1)
   where
     n  = fromEnum f
-    i  = compoundingRate r 
+    i  = compoundingRate r
+
+-- assumes that the contribution is made at the same frequency
+-- that the interest is paid
+-- TODO: fix that!
+growthWithContribution c r p = c + (growth r p)
 
 compoundingRate ::
   Rate ->    -- nominal rate, and payoff frequency
@@ -154,3 +164,17 @@ compoundInterest principal rate start end freq =
     finalBalance = (snd . last) steps
     dates        = datesUntil' freq start end 1
     bals         = iterate (growth rate) principal
+
+compoundWithContribution ::
+  Balance ->    -- principal today
+  Rate    ->    -- interest rate
+  Day -> Day -> -- start, end dats
+  Contribution_  ->
+  (Balance, [ProjectionData])
+compoundWithContribution principal rate start end c@(Contribution_ contribution freq) =
+  (finalBalance, steps)
+  where
+    steps = zip dates bals
+    finalBalance = (snd . last) steps
+    dates = datesUntil' freq start end 1
+    bals = iterate (growthWithContribution contribution rate) principal
