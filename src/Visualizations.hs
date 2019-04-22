@@ -27,6 +27,27 @@ plotArea cd = toRenderable layout
 
     green1 = opaque $ sRGB 0.5 1 0.5
 
+-- compare the growth of two streams
+comparisonAreas :: String -> PlotData -> PlotData -> Renderable ()
+comparisonAreas title a b = toRenderable layout
+  where
+    layout = layout_title .~ title
+      $ layout_grid_last  .~ True
+      $ layout_plots      .~ [ toPlot areaChart1, toPlot areaChart2 ]
+      $ def
+      
+    areaChart1 = plot_fillbetween_style .~ solidFillStyle green1
+      $ plot_fillbetween_values .~ [ (d, (0, v)) | (d, v) <- a ]
+      $ def
+
+    areaChart2 = plot_fillbetween_style .~ solidFillStyle blue1
+      $ plot_fillbetween_values .~ [ (d, (0, v)) | (d, v) <- b ]
+      $ def
+
+    green1 = opaque $ sRGB 0.5 1 0.5
+    blue1 = opaque $ sRGB 0.5 0.5 1
+      
+
 
 -- renders a line graph, good for plotting projections
 -- see: https://github.com/timbod7/haskell-chart/wiki/example-8
@@ -66,8 +87,10 @@ plotBar cd = toRenderable layout
       $ def
 
 -- convenience function when playing in the repl
-writeChart :: FilePath -> Renderable a -> IO (PickFn a)
-writeChart fn chart = renderableToFile def fn chart
+writeChart :: FilePath -> PlotData -> IO (PickFn ())
+writeChart file data' = renderableToFile def file $ plotArea data'
+
+
 
 {-
 playing with accounts and charts:
