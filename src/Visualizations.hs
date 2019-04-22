@@ -65,4 +65,20 @@ plotBar cd = toRenderable layout
       $ plot_bars_style       .~ BarsClustered
       $ def
 
+-- convenience function when playing in the repl
+writeChart :: FilePath -> Renderable a -> IO (PickFn a)
+writeChart fn chart = renderableToFile def fn chart
 
+{-
+playing with accounts and charts:
+
+λ> import Lib
+λ> a = growPrincipal 10000 (Rate 2 Monthly) (Contribution_ 1200 Monthly)
+λ> b = growPrincipal 10000 (Rate 2 Monthly) (Contribution_ 1200 Monthly)
+λ> p = growthInPeriod [a,b] (fromGregorian 2019 04 21) (fromGregorian 2020 04 21) Monthly
+λ> chart = plotArea  p
+λ> writeChart  "test1.png" chart
+λ> :! open test1.png -- will open the chart in Preview
+λ> 
+
+-}

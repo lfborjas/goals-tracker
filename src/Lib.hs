@@ -133,9 +133,9 @@ growth ::
   Rate    -> -- interest rate
   Double  -> -- principal
   Double     -- principal with applied interest
-growth r@(Rate _ f) p = p + p * ((1+i)^n -1)
+growth r p = p + p * ((1+i)^n -1)
   where
-    n  = fromEnum f
+    n  = 1 -- times the interest will be paid
     i  = compoundingRate r
 
 -- assumes that the contribution is made at the same frequency
@@ -216,6 +216,10 @@ For example:
 [(2019-04-21,20000.0),(2020-04-21,22803.68711363004)]
 λ> growthInPeriod [a,b] (fromGregorian 2019 04 21) (fromGregorian 2020 04 21) Monthly
 [(2019-04-21,20000.0),(2019-05-21,22803.68711363004),(2019-06-21,25663.96484518123),(2019-07-21,28581.975439813934),(2019-08-21,31558.884198171094),(2019-09-21,34595.87994173831),(2019-10-21,37694.1754875969),(2019-11-21,40855.00813275951),(2019-12-21,44079.64014828179),(2020-01-21,47369.35928334732),(2020-02-21,50725.479279527266),(2020-03-21,54149.3403954199),(2020-04-21,57642.30994187978)]
-λ> 
+λ>
+
+-- TODO: there's a bug here, in which I'm not really using the Enum correctly: things work fine for Monthly pay-offs,
+but the interest grows hilariously fast if I use Yearly (because it thinks I'm growing one year each month, lol).
+The frequency in growthInPeriod _should_ inform the `n` we end up deriving in growth
 
 -}
