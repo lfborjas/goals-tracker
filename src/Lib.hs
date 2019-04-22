@@ -9,6 +9,7 @@ import Data.Time.Calendar
 type Balance = Double
 type PlotData = [(Day, Balance)]
 type ProjectionData = (Day, Balance)
+type DateRange = (Day, Day)
 
 
 
@@ -41,6 +42,12 @@ data Contribution_ = Contribution_
     amount_    :: Balance
   , frequency_ :: Frequency
   } deriving Show
+
+data TrackingAccount = TrackingAccount
+  { accountContribution :: Contribution_
+  , accountRate         :: Rate
+  , accountBalance      :: Balance
+  }
 
 dateInc ::
   Frequency ->
@@ -187,6 +194,10 @@ growPrincipal ::
 growPrincipal principal rate (Contribution_ contribution _) =
   iterate (growthWithContribution contribution rate) principal
 
+growAccount :: TrackingAccount -> [Balance]
+growAccount a@(TrackingAccount c r b) = growPrincipal b r c
+  
+
 combineBalances ::
   [[Balance]] ->
   [Balance]
@@ -223,3 +234,13 @@ but the interest grows hilariously fast if I use Yearly (because it thinks I'm g
 The frequency in growthInPeriod _should_ inform the `n` we end up deriving in growth
 
 -}
+
+growthReport :: [TrackingAccount] -> DateRange -> ([ProjectionData], [ProjectionData])
+growthReport accounts interval@(start, end) =
+  (projectedGrowth, projectedContributions)
+  where
+    projectedGrowth        = growthInPeriod (map growAccount accounts) start end Monthly
+    projectedContributions = growthInPeriod [(growPrincipal allPrincipals  (Rate 0 Monthly) allContributions)] start end Monthly
+    allPrincipals          = sum (map accountBalance accounts)
+    allContributions       = Contribution_ (sum (map contributionAmount accounts)) Monthly
+    contributionAmount  (TrackingAccount (Contribution_ a _) _ _) = a
